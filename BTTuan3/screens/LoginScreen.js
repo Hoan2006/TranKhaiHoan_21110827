@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Text, Alert } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../src/firebaseConfig';
 
@@ -7,18 +8,27 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    signInWithEmailAndPassword(auth, email, password)
-      .then(userCredential => {
-        Alert.alert('Success', 'Logged in successfully!', [
-          { text: 'OK', onPress: () => navigation.navigate('Profile') },
-        ]);
-      })
-      .catch(error => {
-        Alert.alert('Login Failed', error.message, [
-          { text: 'OK', onPress: () => {} },
-        ]);
-      });
+  const handleLogin = async () => {
+    try {
+      // Đăng nhập với Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Lấy thông tin người dùng và ID token
+      const user = userCredential.user;
+      const token = await user.getIdToken(); // Lấy ID token từ Firebase
+
+      // Lưu token vào AsyncStorage
+      await AsyncStorage.setItem('token', token);
+
+      Alert.alert('Success', 'Logged in successfully!', [
+        { text: 'OK', onPress: () => navigation.navigate('Profile') },
+      ]);
+    } catch (error) {
+      console.error('Error:', error);
+      Alert.alert('Login Failed', 'Invalid credentials or network error.', [
+        { text: 'OK', onPress: () => {} },
+      ]);
+    }
   };
 
   return (
