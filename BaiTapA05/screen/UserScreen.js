@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { auth, signOut, updateUserData, getUserData } from '../firebase';
 import { sendOTPEmail, generateOTP } from '../otpService';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const UserScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -51,11 +52,43 @@ const UserScreen = ({ navigation }) => {
       aspect: [4, 3],
       quality: 1,
     });
-
+  
     if (!result.canceled) {
-      setAvatar(result.assets[0].uri);
+      const imageUri = result.assets[0].uri;
+      setAvatar(imageUri); // Hiển thị ảnh ngay lập tức vào khung tròn
+      await handleUploadImage(imageUri); // Upload ảnh lên Firebase
     }
   };
+
+  const handleUploadImage = async (uri) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+  
+    const response = await fetch(uri);
+    const blob = await response.blob();
+  
+    const storage = getStorage();
+    const storageRef = ref(storage, `avatars/${userId}`);
+  
+    try {
+      await uploadBytes(storageRef, blob);
+      const downloadURL = await getDownloadURL(storageRef);
+  
+      // Cập nhật URL vào database mà không làm mất thông tin khác
+      const updates = {
+        avatar: downloadURL,
+        name: oldData.name, // Giữ nguyên các thông tin khác
+        dob: oldData.dob,
+        phone: oldData.phone,
+        address: oldData.address,
+      };
+      
+      await updateUserData(userId, updates); // Cập nhật tất cả các trường
+    } catch (error) {
+      console.error('Lỗi khi upload ảnh:', error);
+    }
+  };
+  
 
   const handleSendOtp = async () => {
     const otp = generateOTP();
@@ -71,20 +104,34 @@ const UserScreen = ({ navigation }) => {
   const handleUpdateInfo = () => {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
-
+  
     getUserData(userId).then(userData => {
-      const changes = {
-        name: name !== userData.name,
-        dob: dob !== userData.dob,
-        phone: phone !== userData.phone,
-        address: address !== userData.address,
-        avatar: avatar !== userData.avatar,
-      };
-
-      if (Object.values(changes).some(change => change)) {
+      const updates = {};
+      let hasChanges = false;
+  
+      // Kiểm tra từng trường xem có thay đổi không
+      if (name !== userData.name && name !== '') {
+        updates.name = name;
+        hasChanges = true;
+      }
+      if (dob !== userData.dob && dob !== '') {
+        updates.dob = dob;
+        hasChanges = true;
+      }
+      if (phone !== userData.phone && phone !== '') {
+        updates.phone = phone;
+        hasChanges = true;
+      }
+      if (address !== userData.address && address !== '') {
+        updates.address = address;
+        hasChanges = true;
+      }
+  
+      // Nếu có thay đổi, yêu cầu xác thực
+      if (hasChanges) {
         Alert.alert(
-          'Xác nhận thay đổi',
-          'Các thông tin sẽ thay đổi, bạn chắc chưa?',
+          'Xác nhận',
+          'Bạn có chắc muốn lưu các thay đổi?',
           [
             {
               text: 'Hủy',
@@ -100,32 +147,48 @@ const UserScreen = ({ navigation }) => {
               },
             },
             {
-              text: 'Xác nhận',
+              text: 'Lưu',
               onPress: () => {
-                handleSendOtp();
+                handleSendOtp(); // Gửi OTP
                 setEditModalVisible(true);
               },
             },
           ]
         );
+      } else {
+        Alert.alert('Thông báo', 'Không có thay đổi nào để lưu.');
       }
     });
   };
+  
 
   const handleConfirmUpdate = async () => {
     if (otp !== generatedOtp) {
       Alert.alert('Lỗi', 'Mã OTP không đúng!');
       return;
     }
-
+  
     const userId = auth.currentUser?.uid;
     try {
       if (!userId) throw new Error('Người dùng chưa đăng nhập');
-
-      await updateUserData(userId, { name, dob, phone, address, avatar });
+  
+      // Chỉ cập nhật các trường đã thay đổi
+      const updates = {};
+      if (name !== oldData.name) updates.name = name;
+      if (dob !== oldData.dob) updates.dob = dob;
+      if (phone !== oldData.phone) updates.phone = phone;
+      if (address !== oldData.address) updates.address = address;
+  
+      // Cập nhật avatar nếu đã thay đổi
+      if (avatar !== oldData.avatar) {
+        updates.avatar = avatar; // Cập nhật URL avatar
+      }
+  
+      await updateUserData(userId, updates); // Cập nhật các trường đã thay đổi
       Alert.alert('Thông báo', 'Cập nhật thông tin thành công!');
       setEditModalVisible(false);
-
+  
+      // Tải lại dữ liệu người dùng
       const userData = await getUserData(userId);
       setOldData({
         name: userData.name || '',
@@ -143,6 +206,7 @@ const UserScreen = ({ navigation }) => {
       Alert.alert('Lỗi', 'Không thể cập nhật thông tin.');
     }
   };
+  
 
   const handleSignOut = () => {
     signOut(auth)
@@ -305,7 +369,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   button: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#33CC33',
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 5,
@@ -320,7 +384,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   logoutButton: {
-    backgroundColor: '#dc3545',
+    backgroundColor: '#FF5252',
   },
   modalContainer: {
     flex: 1,
