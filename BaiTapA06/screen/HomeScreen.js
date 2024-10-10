@@ -4,14 +4,18 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { FontAwesome } from '@expo/vector-icons';
 import UserScreen from './UserScreen';
 import HomeContent from './HomeContent';
+import ProductDetailsScreen from './ProductDetailsScreen'; // Import ProductDetailsScreen
 import FavoritesScreen from './FavoritesScreen';
 import CartScreen from './CartScreen';
 import OrderScreen from './OrderScreen'; // Import OrderScreen
+import OrderConfirmationScreen from './OrderConfirmationScreen'; // Import OrderConfirmationScreen
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
 const UserStack = createStackNavigator();
 const FavoriteStack = createStackNavigator(); // Tạo Stack cho Favorites
+const CartStack = createStackNavigator(); // Tạo Stack cho Cart
+const OrderStack = createStackNavigator(); // Tạo Stack cho Order
 
 // HomeStackScreen
 const HomeStackScreen = () => (
@@ -24,6 +28,11 @@ const HomeStackScreen = () => (
       name="HomeContent"
       component={HomeContent}
       options={{ title: 'Trang Chủ' }}
+    />
+    <HomeStack.Screen
+      name="ProductDetails" // Thêm route cho ProductDetailsScreen
+      component={ProductDetailsScreen}
+      options={{ title: 'Chi Tiết Sản Phẩm' }} // Tiêu đề cho màn hình chi tiết sản phẩm
     />
   </HomeStack.Navigator>
 );
@@ -58,6 +67,42 @@ const FavoriteStackScreen = () => (
   </FavoriteStack.Navigator>
 );
 
+// CartStackScreen
+const CartStackScreen = () => (
+  <CartStack.Navigator
+    screenOptions={{
+      headerLeft: () => null, // Bỏ nút quay lại
+    }}
+  >
+    <CartStack.Screen
+      name="CartScreen"
+      component={CartScreen}
+      options={{ title: 'Giỏ Hàng' }}
+    />
+    <CartStack.Screen
+      name="OrderConfirmation" // Định nghĩa route cho OrderConfirmationScreen
+      component={OrderConfirmationScreen}
+      options={{ title: 'Xác Nhận Đơn Hàng' }} // Tiêu đề cho màn hình xác nhận
+    />
+  </CartStack.Navigator>
+);
+
+// OrderStackScreen
+const OrderStackScreen = () => (
+  <OrderStack.Navigator
+    screenOptions={{
+      headerLeft: () => null, // Bỏ nút quay lại
+    }}
+  >
+    <OrderStack.Screen
+      name="OrderScreen"
+      component={OrderScreen}
+      options={{ title: 'Đơn Hàng' }} // Tiêu đề cho OrderScreen
+    />
+  </OrderStack.Navigator>
+);
+
+// Tab Navigator cho HomeScreen
 const HomeScreen = () => {
   return (
     <Tab.Navigator
@@ -96,12 +141,12 @@ const HomeScreen = () => {
       />
       <Tab.Screen
         name="Cart"
-        component={CartScreen}
+        component={CartStackScreen} // Thay đổi thành CartStackScreen
         options={{ title: 'Giỏ Hàng' }}
       />
       <Tab.Screen
         name="Order"
-        component={OrderScreen} // Thêm OrderScreen vào Tab Navigator
+        component={OrderStackScreen} // Sử dụng OrderStackScreen cho Order
         options={{ title: 'Đơn Hàng' }}
       />
       <Tab.Screen
