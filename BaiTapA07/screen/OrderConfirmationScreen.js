@@ -56,7 +56,7 @@ const OrderConfirmationScreen = ({ route, navigation }) => {
                 .then(() => {
                   Alert.alert(
                     'Đặt hàng thành công!',
-                    'Đơn hàng của bạn đã được xác nhận. Vui lòng theo dõi đơn hàng tại mục Đơn hàng.',
+                    'Đơn hàng của bạn đã được đặt thành công. Vui lòng theo dõi đơn hàng tại mục Đơn hàng.',
                     [{ text: 'OK', onPress: () => navigation.goBack() }]
                   );
                 })
